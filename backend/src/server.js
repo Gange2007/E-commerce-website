@@ -1,3 +1,12 @@
+const dns = require('dns');
+
+// Force Google DNS for Node resolver to fix MongoDB Atlas SRV query issues
+dns.setServers([
+  "8.8.8.8",
+  "8.8.4.4"
+]);
+dns.setDefaultResultOrder("ipv4first");
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -45,5 +54,5 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
