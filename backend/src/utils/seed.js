@@ -1,15 +1,45 @@
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+const dns = require("dns");
 
-dotenv.config();
+// Force Google DNS for Node resolver
+dns.setServers([
+  "8.8.8.8",
+  "8.8.4.4"
+]);
+
+dns.setDefaultResultOrder("ipv4first");
+
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const path = require("path");
+
+dotenv.config({
+  path: path.join(__dirname, "../../.env")
+});
 
 const User = require('../models/User');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 
 const connectDB = async () => {
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce');
-  console.log('MongoDB connected for seeding');
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 15000,
+      family: 4
+    });
+
+    console.log('MongoDB connected for seeding');
+  } catch (error) {
+    console.error("MongoDB connection failed:");
+    console.error(error.message);
+    process.exit(1);
+  }
+};
+
+const generateSlug = (text) => {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 };
 
 const categories = [
@@ -67,7 +97,6 @@ const seedDB = async () => {
     const beauty = createdCategories.find(c => c.name === 'Beauty');
 
     const products = [
-      // ORIGINAL 12 PRODUCTS - Converted to Indian Pricing
       {
         name: 'Wireless Noise Cancelling Headphones',
         description: 'Premium wireless headphones with active noise cancellation, 30-hour battery life, and crystal-clear sound quality.',
@@ -254,3 +283,28 @@ const seedDB = async () => {
         stock: 120,
         isFeatured: false,
         rating: 4.7,
+        numReviews: 243,
+        sold: 356,
+        tags: ['yoga', 'fitness', 'sports'],
+      },
+    ];
+
+    // Create products using Product.create() to trigger pre-save hooks and pass generated slugs
+    for (const product of products) {
+      await Product.create({
+        ...product,
+        slug: generateSlug(product.name),
+      });
+    }
+
+    console.log('Products created successfully');
+    console.log('Database seeded successfully');
+    process.exit(0);
+
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+};
+
+seedDB();
