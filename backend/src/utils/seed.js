@@ -55,33 +55,39 @@ const seedDB = async () => {
   try {
     await connectDB();
 
-    // Clear existing data
+    // 1. Drop existing indexes on Product collection to clear corrupted { slug: null } indexes
+    try {
+      await Product.collection.dropIndexes();
+      console.log('Dropped old indexes');
+    } catch (err) {
+      console.log('No indexes to drop or collection clean');
+    }
+
+    // 2. Clear existing collections
     await Promise.all([
       User.deleteMany({}),
       Category.deleteMany({}),
       Product.deleteMany({}),
     ]);
-
     console.log('Cleared existing data');
 
-    // Create users
-    const adminUser = await User.create({
+    // 3. Create users
+    await User.create({
       name: 'Admin User',
       email: 'admin@ecommerce.com',
       password: 'admin123',
       role: 'admin',
     });
 
-    const regularUser = await User.create({
+    await User.create({
       name: 'John Doe',
       email: 'john@example.com',
       password: 'user123',
       role: 'user',
     });
-
     console.log('Users created');
 
-    // Create categories using create() to trigger pre-save hooks (slug generation)
+    // 4. Create categories
     const createdCategories = [];
     for (const cat of categories) {
       const c = await Category.create(cat);
@@ -289,7 +295,7 @@ const seedDB = async () => {
       },
     ];
 
-    // Create products using Product.create() to trigger pre-save hooks and pass generated slugs
+    // 5. Create products using Product.create() with generated slugs
     for (const product of products) {
       await Product.create({
         ...product,
@@ -302,7 +308,7 @@ const seedDB = async () => {
     process.exit(0);
 
   } catch (error) {
-    console.error(error);
+    console.error('Seeding failed:', error);
     process.exit(1);
   }
 };
